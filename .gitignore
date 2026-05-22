@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+pgdata/
+email-data/
+*.backup
+*.xlsx
+*.csv
+*password*
+*secret*
+*credentials*

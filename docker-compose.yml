@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: financisto
+      POSTGRES_PASSWORD: financisto
+      POSTGRES_DB: financisto
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financisto"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://financisto:financisto@db:5432/financisto
+    volumes:
+      - backend-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  email-worker:
+    build: ./email-worker
+    environment:
+      API_URL: http://backend:5000/api
+      IMAP_HOST: imap.gmail.com
+      IMAP_USER: ${GMAIL_USER}
+      IMAP_PASS: ${GMAIL_APP_PASSWORD}
+      POLL_INTERVAL: "300"
+      # Map email sources to account IDs in your DB
+      # Run: curl http://localhost:8080/api/accounts to see your account IDs
+      # Format: {"bank": <id>, "card": <id>}
+      ACCOUNT_MAP: ${ACCOUNT_MAP:-{}}
+    volumes:
+      - email-data:/data
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  email-data:
+  backend-data:

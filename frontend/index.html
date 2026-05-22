@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Financisto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6366f1; --primary-light: #818cf8; --danger: #ef4444; --success: #10b981; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --sidebar-w: 240px; --radius: 14px; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* --- Header --- */
+        .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; padding: 1rem 1.2rem; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(99,102,241,0.3); }
+        .header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
+        .header-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; backdrop-filter: blur(4px); transition: background 0.2s; }
+        .header-btn:hover { background: rgba(255,255,255,0.3); }
+
+        /* --- Layout --- */
+        .layout { display: flex; min-height: calc(100vh - 56px); }
+        .sidebar { width: var(--sidebar-w); background: var(--card); border-right: 1px solid var(--border); padding: 1.2rem 0; display: none; flex-shrink: 0; position: sticky; top: 56px; height: calc(100vh - 56px); }
+        .sidebar button { display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 0.8rem 1.2rem; border: none; background: none; font-size: 0.9rem; cursor: pointer; color: var(--muted); text-align: left; border-radius: 0 8px 8px 0; margin-right: 0.5rem; transition: all 0.15s; }
+        .sidebar button:hover { background: #f1f5f9; color: var(--text); }
+        .sidebar button.active { color: var(--primary); background: #eef2ff; border-right: 3px solid var(--primary); font-weight: 600; }
+        .sidebar button .icon { font-size: 1.2rem; }
+        .main { flex: 1; padding: 1.2rem; padding-bottom: 80px; max-width: 960px; margin: 0 auto; }
+
+        /* --- Bottom Nav (mobile) --- */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .bottom-nav button { flex: 1; padding: 0.6rem 0; border: none; background: none; font-size: 0.65rem; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color 0.15s; }
+        .bottom-nav button.active { color: var(--primary); font-weight: 600; }
+        .bottom-nav button .icon { font-size: 1.3rem; }
+
+        /* --- Desktop: show sidebar, hide bottom nav --- */
+        @media (min-width: 768px) {
+            .sidebar { display: block; }
+            .bottom-nav { display: none; }
+            .main { padding-bottom: 1rem; }
+            .fab { bottom: 2rem !important; right: 2rem !important; }
+            .modal { border-radius: var(--radius); max-width: 500px; margin: auto; }
+            .modal-overlay { align-items: center; }
+        }
+
+        /* --- Cards --- */
+        .card { background: var(--card); border-radius: var(--radius); padding: 1.2rem; margin-bottom: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03); border: 1px solid var(--border); transition: box-shadow 0.2s; }
+        .account-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; }
+        @media (min-width: 500px) { .account-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 900px) { .account-grid { grid-template-columns: repeat(3, 1fr); } }
+        .account-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden; }
+        .account-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); opacity: 0; transition: opacity 0.2s; }
+        .account-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .account-card:hover::before { opacity: 1; }
+        .account-card .name { font-weight: 700; font-size: 1.05rem; margin-top: 0.3rem; }
+        .account-card .type { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+        .account-card .balance { font-weight: 800; font-size: 1.4rem; margin-top: 0.5rem; letter-spacing: -0.5px; }
+        .account-card.dragging { opacity: 0.5; transform: scale(0.95); }
+        .account-card.drag-over { border: 2px dashed var(--primary); }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+        .inactive { opacity: 0.5; }
+
+        /* --- Transactions --- */
+        .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .tx-item:last-child { border-bottom: none; }
+        .tx-item .info .payee { font-weight: 500; font-size: 0.95rem; }
+        .tx-item .info .meta { font-size: 0.8rem; color: var(--muted); word-break: break-word; }
+        .tx-item .amount { font-weight: 600; font-size: 1rem; white-space: nowrap; }
+
+        /* --- FAB --- */
+        .fab { position: fixed; bottom: 80px; right: 1rem; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border: none; font-size: 1.8rem; cursor: pointer; box-shadow: 0 4px 16px rgba(99,102,241,0.4); z-index: 99; transition: transform 0.2s, box-shadow 0.2s; }
+        .fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(99,102,241,0.5); }
+
+        /* --- Modal --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; display: flex; align-items: flex-end; backdrop-filter: blur(2px); }
+        .modal { background: var(--card); border-radius: var(--radius) var(--radius) 0 0; padding: 1.5rem; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; }
+
+        /* --- Forms --- */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+        .form-row { display: flex; gap: 0.75rem; }
+        .form-row .form-group { flex: 1; }
+        .btn { padding: 0.8rem 1.5rem; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.1s, box-shadow 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.3); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-secondary { background: #f1f5f9; color: var(--text); }
+        .btn-row { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .btn-row .btn { flex: 1; }
+        .toggle-row { display: flex; gap: 0; margin-bottom: 1rem; }
+        .toggle-row button { flex: 1; padding: 0.65rem; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.15s; }
+        .toggle-row button:first-child { border-radius: 10px 0 0 10px; }
+        .toggle-row button:last-child { border-radius: 0 10px 10px 0; }
+        .toggle-row button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* --- Misc --- */
+        .section-title { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .load-more { display: block; width: 100%; padding: 0.75rem; background: var(--border); border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem; }
+        .back-link { font-size: 0.9rem; color: var(--primary); cursor: pointer; margin-bottom: 0.5rem; display: inline-block; }
+        .empty { text-align: center; color: var(--muted); padding: 2rem; }
+        .hidden { display: none; }
+
+        /* --- Charts --- */
+        .chart-container { position: relative; width: 100%; height: 300px; }
+        .chart-container.chart-large { height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } .chart-container.chart-large { height: 450px; } }
+        .report-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        @media (min-width: 768px) { .report-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💰 Financisto</h1>
+        <button class="header-btn" onclick="showView('import')">Importa</button>
+    </div>
+    <div class="layout">
+        <aside class="sidebar">
+            <button onclick="showView('accounts')" id="side-accounts"><span class="icon">🏦</span>Conti</button>
+            <button onclick="showView('transactions')" id="side-transactions"><span class="icon">📋</span>Movimenti</button>
+            <button onclick="showView('categories')" id="side-categories"><span class="icon">🏷️</span>Categorie</button>
+            <button onclick="showView('reports')" id="side-reports"><span class="icon">📊</span>Report</button>
+            <button onclick="showView('import')" id="side-import"><span class="icon">📁</span>Importa</button>
+        </aside>
+        <div class="main" id="content"></div>
+    </div>
+    <button class="fab hidden" id="fab" onclick="onFabClick()">+</button>
+    <nav class="bottom-nav">
+        <button onclick="showView('accounts')" id="nav-accounts"><span class="icon">🏦</span>Conti</button>
+        <button onclick="showView('transactions')" id="nav-transactions"><span class="icon">📋</span>Movimenti</button>
+        <button onclick="showView('categories')" id="nav-categories"><span class="icon">🏷️</span>Categorie</button>
+        <button onclick="showView('reports')" id="nav-reports"><span class="icon">📊</span>Report</button>
+    </nav>
+    <div id="modal-root"></div>
+    <script src="app.js"></script>
+</body>
+</html>
