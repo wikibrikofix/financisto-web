@@ -114,10 +114,11 @@ create_lxc() {
     read -rp "CPU cores [$CPU]: " input; CPU="${input:-$CPU}"
     read -rp "Storage [$STORAGE]: " input; STORAGE="${input:-$STORAGE}"
 
-    msg_info "Downloading Debian 13 template"
-    TEMPLATE="debian-13-standard_13.0-1_amd64.tar.zst"
+    msg_info "Downloading Debian template"
+    TEMPLATE=$(pveam available --section system | grep "debian-1[23]-standard" | tail -1 | awk '{print $2}')
+    if [[ -z "$TEMPLATE" ]]; then msg_error "No Debian template found"; fi
     pveam download local "$TEMPLATE" 2>/dev/null || true
-    msg_ok "Template ready"
+    msg_ok "Template ready: $TEMPLATE"
 
     msg_info "Creating LXC container $CT_ID"
     pct create "$CT_ID" "local:vztmpl/$TEMPLATE" \
