@@ -32,8 +32,8 @@ function showModal(html) { $('modal-root').innerHTML = `<div class="modal-overla
 function closeModal() { $('modal-root').innerHTML = ''; }
 
 function toggleBlur() {
-    document.querySelector('.main').classList.toggle('blurred');
-    $('toggle-blur').textContent = document.querySelector('.main').classList.contains('blurred') ? '👁️‍🗨️' : '👁️';
+    const blurred = $('toggle-blur').checked;
+    document.querySelector('.main').classList.toggle('blurred', blurred);
 }
 
 async function loadData() {

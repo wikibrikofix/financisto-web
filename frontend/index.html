@@ -121,7 +121,11 @@
     <div class="header">
         <h1>💰 Financisto</h1>
         <div style="display:flex;gap:0.5rem;align-items:center">
-            <button class="header-btn" id="toggle-blur" onclick="toggleBlur()" title="Nascondi importi">👁️</button>
+            <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:#fff">
+                <input type="checkbox" id="toggle-blur" onchange="toggleBlur()" style="width:36px;height:20px;appearance:none;background:rgba(255,255,255,0.3);border-radius:10px;position:relative;cursor:pointer;transition:background 0.2s" 
+                onclick="this.style.background=this.checked?'#10b981':'rgba(255,255,255,0.3)'">
+                👁️
+            </label>
             <button class="header-btn" onclick="showView('import')">Importa</button>
         </div>
     </div>
