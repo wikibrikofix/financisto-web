@@ -136,11 +136,11 @@ create_lxc() {
     msg_ok "Container $CT_ID created"
 
     msg_info "Waiting for container to start"
-    sleep 5
+    sleep 10
     msg_ok "Container running"
 
     msg_info "Running installer inside container"
-    pct exec "$CT_ID" -- bash -c "curl -fsSL https://raw.githubusercontent.com/wikibrikofix/financisto-web/main/proxmox/install.sh | bash -s -- --inside"
+    pct exec "$CT_ID" -- bash -c "apt-get update -qq && apt-get install -y -qq curl git && curl -fsSL https://raw.githubusercontent.com/wikibrikofix/financisto-web/main/proxmox/install.sh | bash -s -- --inside"
     msg_ok "Installation complete"
 
     IP=$(pct exec "$CT_ID" -- hostname -I | awk '{print $1}')
