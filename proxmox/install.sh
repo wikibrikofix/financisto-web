@@ -113,6 +113,7 @@ create_lxc() {
     read -rp "RAM MB [$RAM]: " input; RAM="${input:-$RAM}"
     read -rp "CPU cores [$CPU]: " input; CPU="${input:-$CPU}"
     read -rp "Storage [$STORAGE]: " input; STORAGE="${input:-$STORAGE}"
+    read -rsp "Root password: " CT_PASS; echo
 
     msg_info "Downloading Debian template"
     TEMPLATE=$(pveam available --section system | grep "debian-1[23]-standard" | tail -1 | awk '{print $2}')
@@ -130,7 +131,8 @@ create_lxc() {
         --unprivileged 1 \
         --features nesting=1 \
         --onboot 1 \
-        --start 1
+        --start 1 \
+        --password "$CT_PASS"
     msg_ok "Container $CT_ID created"
 
     msg_info "Waiting for container to start"
