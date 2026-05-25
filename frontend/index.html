@@ -104,7 +104,9 @@
         .back-link { font-size: 0.9rem; color: var(--primary); cursor: pointer; margin-bottom: 0.5rem; display: inline-block; }
         .empty { text-align: center; color: var(--muted); padding: 2rem; }
         .hidden { display: none; }
-        .blurred .balance, .blurred .amount, .blurred .tx-amount { filter: blur(8px); user-select: none; }
+        .blurred .balance, .blurred .amount, .blurred .tx-amount { filter: blur(4px); user-select: none; }
+        .toggle-switch input:checked + span { background: #10b981; }
+        .toggle-switch input:checked + span + span { transform: translateX(18px); }
         .filter-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 50; max-height: 200px; overflow-y: auto; }
         .filter-option { padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.85rem; }
         .filter-option:hover { background: #f1f5f9; }
@@ -121,10 +123,10 @@
     <div class="header">
         <h1>💰 Financisto</h1>
         <div style="display:flex;gap:0.5rem;align-items:center">
-            <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:#fff">
-                <input type="checkbox" id="toggle-blur" onchange="toggleBlur()" style="width:36px;height:20px;appearance:none;background:rgba(255,255,255,0.3);border-radius:10px;position:relative;cursor:pointer;transition:background 0.2s" 
-                onclick="this.style.background=this.checked?'#10b981':'rgba(255,255,255,0.3)'">
-                👁️
+            <label class="toggle-switch" style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer">
+                <input type="checkbox" id="toggle-blur" onchange="toggleBlur()" style="opacity:0;width:0;height:0">
+                <span style="position:absolute;inset:0;background:rgba(255,255,255,0.3);border-radius:11px;transition:background 0.3s"></span>
+                <span style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.3s"></span>
             </label>
             <button class="header-btn" onclick="showView('import')">Importa</button>
         </div>
