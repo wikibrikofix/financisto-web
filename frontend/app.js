@@ -641,11 +641,33 @@ function renderLogs() {
                 <option value="db">Database</option>
             </select>
             <span style="font-size:0.8rem;color:var(--muted)">Auto-refresh ogni 5s</span>
+            <button onclick="systemUpdate()" style="margin-left:auto;padding:0.4rem 0.8rem;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;background:var(--primary);color:#fff">🔄 Aggiorna & Riavvia</button>
         </div>
+        <div id="update-status" style="display:none;padding:0.5rem;border-radius:6px;margin-bottom:0.5rem;font-size:0.85rem"></div>
         <div id="log-output" style="background:#1e293b;color:#e2e8f0;padding:1rem;border-radius:10px;font-family:monospace;font-size:0.8rem;max-height:70vh;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
     </div>`;
     fetchLogs();
     logsInterval = setInterval(fetchLogs, 5000);
+}
+
+async function systemUpdate() {
+    const status = $('update-status');
+    status.style.display = 'block'; status.style.background = '#e3f2fd'; status.style.color = 'var(--text)';
+    status.textContent = '⏳ Aggiornamento in corso (git pull + rebuild)...';
+    try {
+        const res = await fetch(API + '/system/update', {method: 'POST'});
+        const data = await res.json();
+        if (res.ok) {
+            status.style.background = '#e8f5e9'; status.style.color = 'var(--success)';
+            status.textContent = '✅ ' + data.git;
+        } else {
+            status.style.background = '#ffebee'; status.style.color = 'var(--danger)';
+            status.textContent = '❌ ' + data.error;
+        }
+    } catch(e) {
+        status.style.background = '#ffebee'; status.style.color = 'var(--danger)';
+        status.textContent = '❌ ' + e.message;
+    }
 }
 
 async function fetchLogs() {

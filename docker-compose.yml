@@ -21,6 +21,7 @@ services:
     volumes:
       - backend-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
     depends_on:
       db:
         condition: service_healthy
