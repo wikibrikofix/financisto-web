@@ -31,6 +31,11 @@ function onFabClick() {
 function showModal(html) { $('modal-root').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
 function closeModal() { $('modal-root').innerHTML = ''; }
 
+function toggleBlur() {
+    document.querySelector('.main').classList.toggle('blurred');
+    $('toggle-blur').textContent = document.querySelector('.main').classList.contains('blurred') ? '👁️‍🗨️' : '👁️';
+}
+
 async function loadData() {
     [state.accounts, state.categories, state.payees, state.currencies] = await Promise.all([
         api('/accounts'), api('/categories'), api('/payees'), api('/currencies')
