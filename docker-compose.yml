@@ -39,6 +39,9 @@ services:
       IMAP_USER: ${GMAIL_USER}
       IMAP_PASS: ${GMAIL_APP_PASSWORD}
       POLL_INTERVAL: "300"
+      BANK_SENDER: ${BANK_SENDER:-}
+      BANK_SUBJECT: ${BANK_SUBJECT:-}
+      CARD_SENDER: ${CARD_SENDER:-}
       # Map email sources to account IDs in your DB
       # Run: curl http://localhost:8080/api/accounts to see your account IDs
       # Format: {"bank": <id>, "card": <id>}

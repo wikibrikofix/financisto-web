@@ -496,8 +496,8 @@ def search_transactions():
     """Filtered transaction search."""
     limit = request.args.get("limit", 50, type=int)
     offset = request.args.get("offset", 0, type=int)
-    account_id = request.args.get("account_id", type=int)
-    category_id = request.args.get("category_id", type=int)
+    account_id = request.args.get("account_id")
+    category_id = request.args.get("category_id")
     payee_id = request.args.get("payee_id", type=int)
     date_from = request.args.get("date_from")  # YYYY-MM-DD
     date_to = request.args.get("date_to")      # YYYY-MM-DD
@@ -506,9 +506,11 @@ def search_transactions():
     where = ["t.parent_id = 0", "t.is_template = 0"]
     params = []
     if account_id:
-        where.append("t.from_account_id = %s"); params.append(account_id)
+        ids = [int(x) for x in account_id.split(',')]
+        where.append("t.from_account_id = ANY(%s)"); params.append(ids)
     if category_id:
-        where.append("t.category_id = %s"); params.append(category_id)
+        ids = [int(x) for x in category_id.split(',')]
+        where.append("t.category_id = ANY(%s)"); params.append(ids)
     if payee_id:
         where.append("t.payee_id = %s"); params.append(payee_id)
     if date_from:

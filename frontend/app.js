@@ -21,8 +21,9 @@ function showView(view) {
 }
 
 function onFabClick() {
-    if (state.view === 'accounts') showAccountForm();
-    else if (state.view === 'transactions' || state.currentAccount) showTransactionForm();
+    if (state.currentAccount) showTransactionForm();
+    else if (state.view === 'accounts') showAccountForm();
+    else if (state.view === 'transactions') showTransactionForm();
     else if (state.view === 'categories') showCategoryForm();
 }
 
@@ -121,7 +122,7 @@ function showAccountForm(editId) {
         </div>
         <div class="form-group"><label>Note</label><textarea id="f-note">${a?.note||''}</textarea></div>
         <div class="btn-row"><button class="btn btn-secondary" onclick="closeModal()">Annulla</button><button class="btn btn-primary" onclick="saveAccount(${editId||'null'})">Salva</button></div>
-        ${a?`<button class="btn btn-danger" style="margin-top:0.5rem" onclick="deleteAccount(${editId})">Chiudi conto</button>`:''}
+        ${a?`<button class="btn btn-danger" style="margin-top:0.5rem" onclick="deleteAccount(${editId})">${a.is_active?'Chiudi conto':'Riattiva conto'}</button>`:''}
     `);
 }
 async function saveAccount(id) {
@@ -131,23 +132,36 @@ async function saveAccount(id) {
     closeModal(); await loadData();
     if (id && state.currentAccount) openAccount(id); else renderAccounts();
 }
-async function deleteAccount(id) { if (!confirm('Chiudere questo conto?')) return; await apiDelete(`/accounts/${id}`); closeModal(); await loadData(); showView('accounts'); }
+async function deleteAccount(id) {
+    const acc = state.accounts.find(a => a.id === id);
+    if (acc && !acc.is_active) { await apiPut(`/accounts/${id}`, {...acc, is_active: true}); }
+    else { if (!confirm('Chiudere questo conto?')) return; await apiDelete(`/accounts/${id}`); }
+    closeModal(); await loadData(); showView('accounts');
+}
 
 // --- Transactions with Filters ---
 let txFilters = {};
+let selectedAccounts = [];
+let selectedCategories = [];
 
 async function renderTransactions() {
     txFilters = {};
+    selectedAccounts = [];
+    selectedCategories = [];
     let html = `<div class="card" style="padding:0.75rem">
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
-            <select id="filter-account" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
-                <option value="">Tutti i conti</option>${state.accounts.filter(a=>a.is_active).map(a=>`<option value="${a.id}">${a.title}</option>`).join('')}
-            </select>
-            <select id="filter-category" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
-                <option value="">Tutte le categorie</option>${state.categories.map(c=>`<option value="${c.id}">${c.title}</option>`).join('')}
-            </select>
-            <input id="filter-from" type="date" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem" placeholder="Da">
-            <input id="filter-to" type="date" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem" placeholder="A">
+            <div class="multi-filter" style="position:relative;flex:1;min-width:150px">
+                <input id="filter-account-input" placeholder="Conti..." oninput="showFilterDropdown('account')" onfocus="showFilterDropdown('account')" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;width:100%">
+                <div id="filter-account-tags" style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"></div>
+                <div id="filter-account-dropdown" class="filter-dropdown hidden"></div>
+            </div>
+            <div class="multi-filter" style="position:relative;flex:1;min-width:150px">
+                <input id="filter-category-input" placeholder="Categorie..." oninput="showFilterDropdown('category')" onfocus="showFilterDropdown('category')" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;width:100%">
+                <div id="filter-category-tags" style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px"></div>
+                <div id="filter-category-dropdown" class="filter-dropdown hidden"></div>
+            </div>
+            <input id="filter-from" type="date" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
+            <input id="filter-to" type="date" onchange="applyFilters()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
             <button onclick="clearFilters()" style="padding:0.4rem 0.6rem;border:none;background:var(--border);border-radius:6px;font-size:0.8rem;cursor:pointer">✕ Reset</button>
         </div>
     </div>`;
@@ -159,8 +173,8 @@ async function renderTransactions() {
 async function applyFilters() {
     state.txOffset = 0;
     const params = new URLSearchParams();
-    const acc = $('filter-account')?.value; if (acc) params.set('account_id', acc);
-    const cat = $('filter-category')?.value; if (cat) params.set('category_id', cat);
+    if (selectedAccounts.length) params.set('account_id', selectedAccounts.join(','));
+    if (selectedCategories.length) params.set('category_id', selectedCategories.join(','));
     const from = $('filter-from')?.value; if (from) params.set('date_from', from);
     const to = $('filter-to')?.value; if (to) params.set('date_to', to);
     params.set('limit', '50');
@@ -184,11 +198,55 @@ async function loadMoreFilteredTx() {
 }
 
 function clearFilters() {
-    if($('filter-account')) $('filter-account').value = '';
-    if($('filter-category')) $('filter-category').value = '';
+    selectedAccounts = []; selectedCategories = [];
+    if($('filter-account-input')) $('filter-account-input').value = '';
+    if($('filter-category-input')) $('filter-category-input').value = '';
     if($('filter-from')) $('filter-from').value = '';
     if($('filter-to')) $('filter-to').value = '';
+    renderFilterTags('account'); renderFilterTags('category');
     applyFilters();
+}
+
+// --- Multi-select filter logic ---
+function showFilterDropdown(type) {
+    const input = $(`filter-${type}-input`);
+    const dropdown = $(`filter-${type}-dropdown`);
+    const query = input.value.toLowerCase();
+    const items = type === 'account' ? state.accounts.filter(a => a.is_active) : state.categories;
+    const selected = type === 'account' ? selectedAccounts : selectedCategories;
+    const filtered = items.filter(item => item.title.toLowerCase().includes(query) && !selected.includes(item.id));
+    if (!filtered.length) { dropdown.classList.add('hidden'); return; }
+    dropdown.innerHTML = filtered.slice(0, 10).map(item =>
+        `<div class="filter-option" onmousedown="selectFilter('${type}', ${item.id}, '${item.title.replace(/'/g,"\\'")}')"> ${item.title}</div>`
+    ).join('');
+    dropdown.classList.remove('hidden');
+    input.onblur = () => setTimeout(() => dropdown.classList.add('hidden'), 150);
+}
+
+function selectFilter(type, id, title) {
+    const selected = type === 'account' ? selectedAccounts : selectedCategories;
+    if (!selected.includes(id)) selected.push(id);
+    $(`filter-${type}-input`).value = '';
+    $(`filter-${type}-dropdown`).classList.add('hidden');
+    renderFilterTags(type);
+    applyFilters();
+}
+
+function removeFilter(type, id) {
+    if (type === 'account') selectedAccounts = selectedAccounts.filter(x => x !== id);
+    else selectedCategories = selectedCategories.filter(x => x !== id);
+    renderFilterTags(type);
+    applyFilters();
+}
+
+function renderFilterTags(type) {
+    const container = $(`filter-${type}-tags`);
+    const selected = type === 'account' ? selectedAccounts : selectedCategories;
+    const items = type === 'account' ? state.accounts : state.categories;
+    container.innerHTML = selected.map(id => {
+        const item = items.find(x => x.id === id);
+        return item ? `<span style="background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.75rem;display:inline-flex;align-items:center;gap:3px">${item.title}<span onclick="removeFilter('${type}',${id})" style="cursor:pointer;font-weight:bold">×</span></span>` : '';
+    }).join('');
 }
 
 function txItem(t, symbol, decimals, showAccount) {
@@ -358,6 +416,7 @@ async function renderReports() {
             <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Spese per Categoria</h3><div class="chart-container"><canvas id="chart-category"></canvas></div></div>
         </div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Dettaglio Giornaliero per Categoria</h3><div class="chart-container chart-large"><canvas id="chart-daily-cat"></canvas></div></div>
+        <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Ultimi 12 Mesi — Entrate vs Uscite</h3><div class="chart-container chart-large"><canvas id="chart-12months"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Andamento Risparmi</h3><div class="chart-container chart-large"><canvas id="chart-savings"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Riepilogo Annuale</h3><div class="chart-container"><canvas id="chart-yearly"></canvas></div></div>
     `;
@@ -371,6 +430,7 @@ async function updateReports() {
         api(`/stats/by-category?month=${month}`), api('/stats/savings'), api('/stats/yearly')
     ]);
     drawMonthlyChart(monthly);
+    draw12MonthsChart(monthly);
     drawDailyCategoryChart(dailyCat, month);
     drawCategoryChart(byCat);
     drawSavingsChart(savings);
@@ -389,6 +449,22 @@ function drawMonthlyChart(data) {
             { label: 'Entrate', data: data.map(r => (r.income||0)/100).reverse(), backgroundColor: '#4caf50' },
             { label: 'Uscite', data: data.map(r => Math.abs(r.expense||0)/100).reverse(), backgroundColor: '#ef5350' }
         ]}, options: chartOpts({ plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } })
+    });
+}
+
+function draw12MonthsChart(data) {
+    if (charts.twelvemonths) charts.twelvemonths.destroy();
+    const last12 = data.slice(0, 12).reverse();
+    const labels = last12.map(r => r.month);
+    const income = last12.map(r => (r.income||0)/100);
+    const expense = last12.map(r => Math.abs(r.expense||0)/100);
+    const net = last12.map(r => ((r.income||0)+(r.expense||0))/100);
+    charts.twelvemonths = new Chart($('chart-12months'), {
+        data: { labels, datasets: [
+            { type: 'bar', label: 'Entrate', data: income, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4, yAxisID: 'y' },
+            { type: 'bar', label: 'Uscite', data: expense, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4, yAxisID: 'y' },
+            { type: 'line', label: 'Netto', data: net, borderColor: '#6366f1', borderWidth: 3, pointRadius: 5, pointBackgroundColor: net.map(v => v >= 0 ? '#10b981' : '#ef4444'), fill: false, tension: 0.3, yAxisID: 'y1' }
+        ]}, options: chartOpts({ plugins: { legend: { position: 'bottom' } }, scales: { y: { position: 'left', beginAtZero: true, title: { display: true, text: '€' } }, y1: { position: 'right', title: { display: true, text: 'Netto €' }, grid: { drawOnChartArea: false } } } })
     });
 }
 
@@ -418,11 +494,15 @@ function drawCategoryChart(data) {
 
 function drawSavingsChart(data) {
     if (charts.savings) charts.savings.destroy();
+    const last12 = data.slice(-12);
+    const labels = last12.map(r => r.month);
+    const net = last12.map(r => ((r.income||0)+(r.expense||0))/100);
+    const cumulative = last12.map(r => (r.cumulative_savings||0)/100);
     charts.savings = new Chart($('chart-savings'), {
-        type: 'line', data: { labels: data.map(r => r.month), datasets: [
-            { label: 'Risparmi cumulativi', data: data.map(r => (r.cumulative_savings||0)/100), borderColor: '#1a73e8', backgroundColor: 'rgba(26,115,232,0.1)', fill: true, tension: 0.3 },
-            { label: 'Netto mensile', data: data.map(r => ((r.income||0)+(r.expense||0))/100), borderColor: '#4caf50', borderDash: [5,5], fill: false, tension: 0.3 }
-        ]}, options: chartOpts({ plugins: { legend: { position: 'bottom' } } })
+        data: { labels, datasets: [
+            { type: 'bar', label: 'Risparmio mensile', data: net, backgroundColor: net.map(v => v >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'), borderRadius: 4, yAxisID: 'y' },
+            { type: 'line', label: 'Risparmi cumulativi', data: cumulative, borderColor: '#6366f1', borderWidth: 3, pointRadius: 4, fill: false, tension: 0.3, yAxisID: 'y1' }
+        ]}, options: chartOpts({ plugins: { legend: { position: 'bottom' } }, scales: { y: { position: 'left', title: { display: true, text: 'Mensile €' } }, y1: { position: 'right', title: { display: true, text: 'Cumulativo €' }, grid: { drawOnChartArea: false } } } })
     });
 }
 

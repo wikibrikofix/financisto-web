@@ -130,7 +130,7 @@ def parse_card_notification(body, date_str):
             'note': f'Card: {payee}',
             'payee_name': payee,
             'source': 'card',
-            'account_key': 'card',
+            'account_key': 'bank',
         }
 
     # Pattern 2: "spesa di EUR 94,60 alle ore 08:00 del giorno 22/05 ... presso NOME"
@@ -146,7 +146,7 @@ def parse_card_notification(body, date_str):
             'note': f'Card: {payee}',
             'payee_name': payee,
             'source': 'card',
-            'account_key': 'card',
+            'account_key': 'bank',
         }
 
     return None
@@ -154,10 +154,16 @@ def parse_card_notification(body, date_str):
 
 
 
-PARSERS = {
-    # Configure your bank email parsers here
-    # 'sender@bank.com': ('subject_filter_or_None', parser_function),
-}
+# Sender configuration via env vars
+BANK_SENDER = os.environ.get("BANK_SENDER", "")
+BANK_SUBJECT = os.environ.get("BANK_SUBJECT", "")
+CARD_SENDER = os.environ.get("CARD_SENDER", "")
+
+PARSERS = {}
+if BANK_SENDER:
+    PARSERS[BANK_SENDER] = (BANK_SUBJECT or None, parse_bank_statement)
+if CARD_SENDER:
+    PARSERS[CARD_SENDER] = (None, parse_card_notification)
 
 
 def is_duplicate(tx, existing_txs):
