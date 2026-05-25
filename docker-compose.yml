@@ -20,6 +20,7 @@ services:
       DATABASE_URL: postgresql://financisto:financisto@db:5432/financisto
     volumes:
       - backend-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       db:
         condition: service_healthy

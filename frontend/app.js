@@ -12,12 +12,13 @@ async function apiDelete(path) { return api(path, { method:'DELETE' }); }
 function showView(view) {
     state.view = view; state.txOffset = 0; state.currentAccount = null;
     clearInfiniteScroll();
+    if (logsInterval) { clearInterval(logsInterval); logsInterval = null; }
     document.querySelectorAll('.bottom-nav button, .sidebar button').forEach(b => b.classList.remove('active'));
     ['nav-','side-'].forEach(p => { const el = $(p + view); if(el) el.classList.add('active'); });
     $('fab').classList.toggle('hidden', view === 'reports' || view === 'import');
     closeModal();
     history.pushState({view}, '', '#' + view);
-    ({accounts: renderAccounts, transactions: renderTransactions, categories: renderCategories, reports: renderReports, import: renderImport})[view]?.();
+    ({accounts: renderAccounts, transactions: renderTransactions, categories: renderCategories, reports: renderReports, import: renderImport, logs: renderLogs})[view]?.();
 }
 
 function onFabClick() {
@@ -624,6 +625,46 @@ async function uploadFile(file) {
         if (res.ok) { status.style.background='#e8f5e9'; status.style.color='var(--success)'; status.textContent='✅ Importazione completata!'; await loadData(); }
         else { status.style.background='#ffebee'; status.style.color='var(--danger)'; status.textContent='❌ '+data.error; }
     } catch(e) { status.style.background='#ffebee'; status.style.color='var(--danger)'; status.textContent='❌ '+e.message; }
+}
+
+// --- Logs ---
+let logsInterval = null;
+
+function renderLogs() {
+    if (logsInterval) clearInterval(logsInterval);
+    $('content').innerHTML = `<div class="card" style="padding:0.75rem">
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem">
+            <select id="log-service" onchange="fetchLogs()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
+                <option value="">Tutti</option>
+                <option value="backend">Backend</option>
+                <option value="email-worker">Email Worker</option>
+                <option value="db">Database</option>
+            </select>
+            <span style="font-size:0.8rem;color:var(--muted)">Auto-refresh ogni 5s</span>
+        </div>
+        <div id="log-output" style="background:#1e293b;color:#e2e8f0;padding:1rem;border-radius:10px;font-family:monospace;font-size:0.8rem;max-height:70vh;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
+    </div>`;
+    fetchLogs();
+    logsInterval = setInterval(fetchLogs, 5000);
+}
+
+async function fetchLogs() {
+    const service = $('log-service')?.value || '';
+    const data = await api(`/logs?service=${service}&lines=100`);
+    const output = $('log-output');
+    if (!output) return;
+    if (service && data.logs) {
+        output.textContent = data.logs.join('\n');
+    } else if (data.error) {
+        output.textContent = 'Error: ' + data.error;
+    } else {
+        let text = '';
+        for (const [svc, lines] of Object.entries(data)) {
+            text += `━━━ ${svc.toUpperCase()} ━━━\n${lines.join('\n')}\n\n`;
+        }
+        output.textContent = text;
+    }
+    output.scrollTop = output.scrollHeight;
 }
 
 // --- Init ---

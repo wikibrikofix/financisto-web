@@ -860,5 +860,29 @@ with app.app_context():
         restart_backup_scheduler(cfg)
 
 
+# --- Logs ---
+@app.route("/api/logs")
+def get_logs():
+    """Get recent docker logs from all services."""
+    import subprocess
+    service = request.args.get("service", "")
+    lines = request.args.get("lines", "50")
+    try:
+        if service:
+            result = subprocess.run(["docker", "logs", f"financisto-web-{service}-1", "--tail", lines],
+                                    capture_output=True, text=True, timeout=5)
+        else:
+            # Get all services
+            logs = {}
+            for svc in ["backend", "email-worker", "db"]:
+                r = subprocess.run(["docker", "logs", f"financisto-web-{svc}-1", "--tail", "20"],
+                                   capture_output=True, text=True, timeout=5)
+                logs[svc] = (r.stdout + r.stderr).strip().split('\n')[-20:]
+            return jsonify(logs)
+        return jsonify({"logs": (result.stdout + result.stderr).strip().split('\n')})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
