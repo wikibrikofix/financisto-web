@@ -860,22 +860,6 @@ with app.app_context():
         restart_backup_scheduler(cfg)
 
 
-# --- Update & Restart ---
-@app.route("/api/system/update", methods=["POST"])
-def system_update():
-    """Pull latest code and rebuild containers."""
-    import subprocess
-    try:
-        result = subprocess.run(["git", "pull"], cwd="/project", capture_output=True, text=True, timeout=30)
-        git_output = result.stdout + result.stderr
-        result2 = subprocess.run(["docker", "compose", "up", "-d", "--build"],
-                                 cwd="/project", capture_output=True, text=True, timeout=300)
-        compose_output = result2.stdout + result2.stderr
-        return jsonify({"status": "ok", "git": git_output.strip(), "compose": compose_output.strip()})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 # --- Logs ---
 @app.route("/api/logs")
 def get_logs():

@@ -660,14 +660,14 @@ async function systemUpdate() {
     status.style.display = 'block'; status.style.background = '#e3f2fd'; status.style.color = 'var(--text)';
     status.textContent = '⏳ Aggiornamento in corso (git pull + rebuild)...';
     try {
-        const res = await fetch(API + '/system/update', {method: 'POST'});
+        const res = await fetch(location.protocol + '//' + location.hostname + ':9090/update', {method: 'POST'});
         const data = await res.json();
-        if (res.ok) {
+        if (data.status === 'ok') {
             status.style.background = '#e8f5e9'; status.style.color = 'var(--success)';
-            status.textContent = '✅ ' + data.git;
+            status.textContent = '✅ ' + data.git + '\nRicarica la pagina tra qualche secondo.';
         } else {
             status.style.background = '#ffebee'; status.style.color = 'var(--danger)';
-            status.textContent = '❌ ' + data.error;
+            status.textContent = '❌ ' + (data.error || 'Errore sconosciuto');
         }
     } catch(e) {
         status.style.background = '#ffebee'; status.style.color = 'var(--danger)';

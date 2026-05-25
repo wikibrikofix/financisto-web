@@ -21,7 +21,6 @@ services:
     volumes:
       - backend-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
-      - .:/project
     depends_on:
       db:
         condition: service_healthy
@@ -53,6 +52,17 @@ services:
       - email-data:/data
     depends_on:
       - backend
+    restart: unless-stopped
+
+  updater:
+    build: ./updater
+    environment:
+      PROJECT_DIR: /project
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/project
+    ports:
+      - "9090:9090"
     restart: unless-stopped
 
 volumes:
