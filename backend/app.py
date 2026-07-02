@@ -140,15 +140,19 @@ def account_transactions(aid):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("""
         SELECT t.*, cat.title as category_title, p.title as payee_title,
-               proj.title as project_title
+               proj.title as project_title,
+               a_from.title as from_account_title, a_to.title as to_account_title
         FROM "transaction" t
         LEFT JOIN category cat ON t.category_id = cat.id
         LEFT JOIN payee p ON t.payee_id = p.id
         LEFT JOIN project proj ON t.project_id = proj.id
-        WHERE t.from_account_id = %s AND t.parent_id = 0 AND t.is_template = 0
+        LEFT JOIN account a_from ON a_from.id = t.from_account_id
+        LEFT JOIN account a_to ON a_to.id = t.to_account_id
+        WHERE (t.from_account_id = %s OR t.to_account_id = %s)
+          AND t.parent_id = 0 AND t.is_template = 0
         ORDER BY t.datetime DESC
         LIMIT %s OFFSET %s
-    """, (aid, limit, offset))
+    """, (aid, aid, limit, offset))
     rows = cur.fetchall()
     cur.close(); conn.close()
     return jsonify(rows)

@@ -102,7 +102,7 @@ async function openAccount(id) {
             </div>
         </div><div class="card">`;
     if (!txs.length) html += '<div class="empty">Nessuna transazione</div>';
-    html += txs.map(t => txItem(t, a.currency_symbol, a.currency_decimals)).join('');
+    html += txs.map(t => txItem(t, a.currency_symbol, a.currency_decimals, false, id)).join('');
     html += '</div>';
     $('content').innerHTML = html; $('fab').classList.remove('hidden');
     if (txs.length >= 50) setupInfiniteScroll(() => loadMoreAccountTx(id));
@@ -113,7 +113,7 @@ async function loadMoreAccountTx(id) {
     state.txOffset += 50;
     const txs = await api(`/accounts/${id}/transactions?limit=50&offset=${state.txOffset}`);
     const card = document.querySelectorAll('.card')[1];
-    txs.forEach(t => card.insertAdjacentHTML('beforeend', txItem(t, state.currentAccount.currency_symbol, state.currentAccount.currency_decimals)));
+    txs.forEach(t => card.insertAdjacentHTML('beforeend', txItem(t, state.currentAccount.currency_symbol, state.currentAccount.currency_decimals, false, state.currentAccount.id)));
     if (txs.length < 50) clearInfiniteScroll();
 }
 
@@ -255,16 +255,22 @@ function renderFilterTags(type) {
     }).join('');
 }
 
-function txItem(t, symbol, decimals, showAccount) {
-    const cls = t.from_amount >= 0 ? 'positive' : 'negative';
+function txItem(t, symbol, decimals, showAccount, currentAccountId) {
+    // Se questo conto è il destinatario del trasferimento, mostra to_amount (positivo)
+    const isIncoming = t.to_account_id > 0 && t.to_account_id === currentAccountId;
+    const displayAmount = isIncoming ? t.to_amount : t.from_amount;
+    const cls = displayAmount >= 0 ? 'positive' : 'negative';
     const pending = !t.category_id || t.category_id === 0;
-    const label = t.payee_title || t.category_title || (t.to_account_id > 0 ? '↔ Trasferimento' : (t.note ? t.note.substring(0, 40) : '—'));
+    const transferLabel = isIncoming
+        ? `↔ Da ${t.from_account_title || 'altro conto'}`
+        : t.to_account_id > 0 ? `↔ Verso ${t.to_account_title || 'altro conto'}` : null;
+    const label = t.payee_title || t.category_title || transferLabel || (t.note ? t.note.substring(0, 40) : '—');
     const meta = [showAccount ? t.account_title : null, t.category_title || t.note || null, fmtDate(t.datetime)].filter(Boolean).join(' • ');
     const pendingBadge = pending && t.to_account_id === 0 ? '<span style="color:#ff6d01;font-size:0.75rem;margin-right:0.3rem">⏳</span>' : '';
     const pendingStyle = pending && t.to_account_id === 0 ? 'border-left:3px solid #ff6d01;padding-left:0.5rem;' : '';
     return `<div class="tx-item" style="${pendingStyle}" onclick='showTxDetail(${JSON.stringify(t).replace(/'/g,"&#39;")})'>
         <div class="info"><div class="payee">${pendingBadge}${label}</div><div class="meta">${meta}</div></div>
-        <div class="amount ${cls}">${fmt(t.from_amount, symbol||'€', decimals||2)}</div>
+        <div class="amount ${cls}">${fmt(displayAmount, symbol||'€', decimals||2)}</div>
     </div>`;
 }
 
