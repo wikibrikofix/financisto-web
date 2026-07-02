@@ -190,13 +190,18 @@ def create_transaction():
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,0,0) RETURNING *
     """, (new_id, d["from_account_id"], d.get("to_account_id", 0),
           d.get("category_id", 0), d.get("project_id", 0), d.get("payee_id", 0),
-          d.get("note"), d["from_amount"], d.get("to_amount", 0), dt,
+          d.get("note"), d["from_amount"], abs(d.get("to_amount", 0)) if d.get("to_account_id") else d.get("to_amount", 0), dt,
           d.get("status", "UR")))
     row = cur.fetchone()
     # Update account balance incrementally
     update_account_balance(cur, d["from_account_id"], d["from_amount"])
     if d.get("to_account_id"):
-        update_account_balance(cur, d["to_account_id"], d.get("to_amount", abs(d["from_amount"])))
+        to_amt = d.get("to_amount", 0)
+        if to_amt == 0:
+            to_amt = abs(d["from_amount"])
+        elif to_amt < 0:
+            to_amt = abs(to_amt)
+        update_account_balance(cur, d["to_account_id"], to_amt)
     # Update last_transaction_date
     cur.execute("UPDATE account SET last_transaction_date = %s WHERE id = %s", (dt, d["from_account_id"]))
     cur.close(); conn.close()
