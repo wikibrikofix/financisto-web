@@ -257,7 +257,7 @@ function renderFilterTags(type) {
 
 function txItem(t, symbol, decimals, showAccount, currentAccountId) {
     // Se questo conto è il destinatario del trasferimento, mostra to_amount (positivo)
-    const isIncoming = t.to_account_id > 0 && t.to_account_id === currentAccountId;
+    const isIncoming = t.to_account_id > 0 && Number(t.to_account_id) === Number(currentAccountId);
     const displayAmount = isIncoming ? t.to_amount : t.from_amount;
     const cls = displayAmount >= 0 ? 'positive' : 'negative';
     const pending = !t.category_id || t.category_id === 0;
