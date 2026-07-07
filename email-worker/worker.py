@@ -291,7 +291,7 @@ def poll():
 
 
 def main():
-    import threading
+    import subprocess, sys
 
     print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s", flush=True)
     print(f"[*] Monitoring: {', '.join(PARSERS.keys())}", flush=True)
@@ -301,12 +301,25 @@ def main():
     time.sleep(10)
 
     while True:
-        # Run poll in a thread with timeout
-        t = threading.Thread(target=poll, daemon=True)
-        t.start()
-        t.join(timeout=120)  # 2 minutes max
-        if t.is_alive():
+        # Run poll in a subprocess to avoid PID 1 socket issues
+        try:
+            result = subprocess.run(
+                [sys.executable, '-u', '-c', 'from worker import poll; poll()'],
+                timeout=120,
+                capture_output=True,
+                text=True,
+                cwd='/app'
+            )
+            if result.stdout:
+                print(result.stdout, end='', flush=True)
+            if result.stderr:
+                print(result.stderr, end='', flush=True)
+            if result.returncode != 0:
+                print(f"[!] Poll subprocess exited with code {result.returncode}", flush=True)
+        except subprocess.TimeoutExpired:
             print("[!] Poll timed out (120s), will retry next cycle", flush=True)
+        except Exception as e:
+            print(f"[!] Error running poll: {e}", flush=True)
         time.sleep(POLL_INTERVAL)
 
 
