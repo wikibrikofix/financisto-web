@@ -35,8 +35,9 @@ services:
 
   email-worker:
     build: ./email-worker
+    network_mode: host
     environment:
-      API_URL: http://backend:5000/api
+      API_URL: http://127.0.0.1:80/api
       IMAP_HOST: imap.gmail.com
       IMAP_USER: ${GMAIL_USER}
       IMAP_PASS: ${GMAIL_APP_PASSWORD}
