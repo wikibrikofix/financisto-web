@@ -6,8 +6,12 @@ import re
 import os
 import time
 import json
+import socket
 import requests
 from datetime import datetime
+
+# Global socket timeout to prevent hanging on DNS/connection
+socket.setdefaulttimeout(30)
 
 API_URL = os.environ.get("API_URL", "http://backend:5000/api")
 IMAP_HOST = os.environ.get("IMAP_HOST", "imap.gmail.com")
