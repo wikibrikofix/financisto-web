@@ -302,6 +302,8 @@ def poll():
 
 
 def main():
+    import threading
+
     print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s", flush=True)
     print(f"[*] Monitoring: {', '.join(PARSERS.keys())}", flush=True)
     print(f"[*] Account map: {ACCOUNT_MAP}", flush=True)
@@ -310,10 +312,12 @@ def main():
     time.sleep(10)
 
     while True:
-        try:
-            poll()
-        except Exception as e:
-            print(f"[!] Error: {e}", flush=True)
+        # Run poll in a thread with timeout
+        t = threading.Thread(target=poll, daemon=True)
+        t.start()
+        t.join(timeout=120)  # 2 minutes max
+        if t.is_alive():
+            print("[!] Poll timed out (120s), will retry next cycle", flush=True)
         time.sleep(POLL_INTERVAL)
 
 
