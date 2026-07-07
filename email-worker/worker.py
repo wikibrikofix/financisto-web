@@ -306,14 +306,10 @@ def main():
             result = subprocess.run(
                 [sys.executable, '-u', '-c', 'from worker import poll; poll()'],
                 timeout=120,
-                capture_output=True,
-                text=True,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
                 cwd='/app'
             )
-            if result.stdout:
-                print(result.stdout, end='', flush=True)
-            if result.stderr:
-                print(result.stderr, end='', flush=True)
             if result.returncode != 0:
                 print(f"[!] Poll subprocess exited with code {result.returncode}", flush=True)
         except subprocess.TimeoutExpired:
