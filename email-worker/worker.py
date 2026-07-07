@@ -220,36 +220,25 @@ def check_duplicates(tx, account_id):
 
 def poll():
     """Poll Gmail for new bank emails."""
-    import signal
-
-    def timeout_handler(signum, frame):
-        raise TimeoutError("IMAP operation timed out")
-
     processed = load_processed()
     print("[*] Connecting to IMAP...", flush=True)
-
-    # Set alarm for entire IMAP session
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(60)  # 60s timeout for entire poll
 
     try:
         mail = imaplib.IMAP4_SSL(IMAP_HOST, 993, timeout=30)
         mail.socket().settimeout(30)
+    except Exception as e:
+        print(f"[!] IMAP connect failed: {e}", flush=True)
+        return
+
+    try:
         print("[*] IMAP connected, logging in...", flush=True)
         mail.login(IMAP_USER, IMAP_PASS)
         print("[*] Logged in, selecting INBOX...", flush=True)
         mail.select('INBOX')
         print("[*] INBOX selected, searching...", flush=True)
-    except TimeoutError as e:
-        print(f"[!] Timeout during IMAP setup: {e}", flush=True)
-        signal.alarm(0)
-        return
     except Exception as e:
         print(f"[!] IMAP setup error: {e}", flush=True)
-        signal.alarm(0)
         return
-
-    signal.alarm(0)  # Cancel alarm
 
     new_count = 0
     for sender, (subject_filter, parser) in PARSERS.items():
