@@ -291,8 +291,6 @@ def poll():
 
 
 def main():
-    import subprocess, sys
-
     print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s", flush=True)
     print(f"[*] Monitoring: {', '.join(PARSERS.keys())}", flush=True)
     print(f"[*] Account map: {ACCOUNT_MAP}", flush=True)
@@ -301,21 +299,10 @@ def main():
     time.sleep(10)
 
     while True:
-        # Run poll in a subprocess to avoid PID 1 socket issues
         try:
-            result = subprocess.run(
-                [sys.executable, '-u', '-c', 'from worker import poll; poll()'],
-                timeout=120,
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-                cwd='/app'
-            )
-            if result.returncode != 0:
-                print(f"[!] Poll subprocess exited with code {result.returncode}", flush=True)
-        except subprocess.TimeoutExpired:
-            print("[!] Poll timed out (120s), will retry next cycle", flush=True)
+            poll()
         except Exception as e:
-            print(f"[!] Error running poll: {e}", flush=True)
+            print(f"[!] Error: {e}", flush=True)
         time.sleep(POLL_INTERVAL)
 
 
