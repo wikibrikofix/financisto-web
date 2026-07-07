@@ -226,6 +226,7 @@ def poll():
     for attempt in range(3):
         try:
             mail = imaplib.IMAP4_SSL(IMAP_HOST, 993, timeout=30)
+            mail.socket().settimeout(30)
             break
         except Exception as e:
             print(f"[!] IMAP connect attempt {attempt+1} failed: {e}", flush=True)
@@ -235,6 +236,7 @@ def poll():
         return
     print("[*] IMAP connected, logging in...", flush=True)
     mail.login(IMAP_USER, IMAP_PASS)
+    print("[*] Logged in, selecting INBOX...", flush=True)
     mail.select('INBOX')
 
     new_count = 0
