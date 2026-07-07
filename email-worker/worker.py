@@ -217,7 +217,8 @@ def check_duplicates(tx, account_id):
 def poll():
     """Poll Gmail for new bank emails."""
     processed = load_processed()
-    mail = imaplib.IMAP4_SSL(IMAP_HOST, 993)
+    print("[*] Connecting to IMAP...", flush=True)
+    mail = imaplib.IMAP4_SSL(IMAP_HOST, 993, timeout=30)
     mail.login(IMAP_USER, IMAP_PASS)
     mail.select('INBOX')
 
@@ -272,15 +273,15 @@ def poll():
 
 
 def main():
-    print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s")
-    print(f"[*] Monitoring: {', '.join(PARSERS.keys())}")
-    print(f"[*] Account map: {ACCOUNT_MAP}")
+    print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s", flush=True)
+    print(f"[*] Monitoring: {', '.join(PARSERS.keys())}", flush=True)
+    print(f"[*] Account map: {ACCOUNT_MAP}", flush=True)
 
     while True:
         try:
             poll()
         except Exception as e:
-            print(f"[!] Error: {e}")
+            print(f"[!] Error: {e}", flush=True)
         time.sleep(POLL_INTERVAL)
 
 
