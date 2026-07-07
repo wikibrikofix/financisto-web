@@ -222,7 +222,18 @@ def poll():
     """Poll Gmail for new bank emails."""
     processed = load_processed()
     print("[*] Connecting to IMAP...", flush=True)
-    mail = imaplib.IMAP4_SSL(IMAP_HOST, 993, timeout=30)
+    mail = None
+    for attempt in range(3):
+        try:
+            mail = imaplib.IMAP4_SSL(IMAP_HOST, 993, timeout=30)
+            break
+        except Exception as e:
+            print(f"[!] IMAP connect attempt {attempt+1} failed: {e}", flush=True)
+            time.sleep(5)
+    if not mail:
+        print("[!] Could not connect to IMAP after 3 attempts", flush=True)
+        return
+    print("[*] IMAP connected, logging in...", flush=True)
     mail.login(IMAP_USER, IMAP_PASS)
     mail.select('INBOX')
 
@@ -280,6 +291,9 @@ def main():
     print(f"[*] Email worker started. Polling every {POLL_INTERVAL}s", flush=True)
     print(f"[*] Monitoring: {', '.join(PARSERS.keys())}", flush=True)
     print(f"[*] Account map: {ACCOUNT_MAP}", flush=True)
+
+    # Wait for network to be ready
+    time.sleep(10)
 
     while True:
         try:
