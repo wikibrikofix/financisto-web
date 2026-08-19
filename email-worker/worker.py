@@ -166,8 +166,9 @@ CARD_SENDER = os.environ.get("CARD_SENDER", "")
 PARSERS = {}
 if BANK_SENDER:
     PARSERS[BANK_SENDER] = (BANK_SUBJECT or None, parse_bank_statement)
-if CARD_SENDER:
-    PARSERS[CARD_SENDER] = (None, parse_card_notification)
+# NumiaPay notifications disabled - amounts are often 1 cent off vs bank statement
+# if CARD_SENDER:
+#     PARSERS[CARD_SENDER] = (None, parse_card_notification)
 
 
 def is_duplicate(tx, existing_txs):
