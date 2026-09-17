@@ -420,6 +420,9 @@ async function renderReports() {
                 <select id="report-month" onchange="updateReports()" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
                     ${Array.from({length:24}, (_,i) => { const d = new Date(now.getFullYear(), now.getMonth()-i, 1); const m = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); return `<option value="${m}">${m}</option>`; }).join('')}
                 </select>
+                <select id="report-months-range" onchange="updateReports()" title="Mesi da visualizzare nei grafici temporali" style="padding:0.4rem;border:1px solid var(--border);border-radius:6px;font-size:0.85rem">
+                    ${[6,12,18,24].map(n => `<option value="${n}"${n===18?' selected':''}>${n} mesi</option>`).join('')}
+                </select>
                 <button onclick="exportJSON()" class="btn-primary" style="padding:0.4rem 0.8rem;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;background:var(--primary);color:#fff">📥 Export JSON</button>
             </div>
         </div>
@@ -428,7 +431,7 @@ async function renderReports() {
             <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Spese per Categoria</h3><div class="chart-container"><canvas id="chart-category"></canvas></div></div>
         </div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Dettaglio Giornaliero per Categoria</h3><div class="chart-container chart-large"><canvas id="chart-daily-cat"></canvas></div></div>
-        <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Ultimi 18 Mesi — Entrate vs Uscite</h3><div class="chart-container chart-large"><canvas id="chart-12months"></canvas></div></div>
+        <div class="card"><h3 id="chart-12months-title" style="margin-bottom:0.5rem;font-size:0.95rem">Ultimi 18 Mesi — Entrate vs Uscite</h3><div class="chart-container chart-large"><canvas id="chart-12months"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Andamento Risparmi</h3><div class="chart-container chart-large"><canvas id="chart-savings"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Riepilogo Annuale</h3><div class="chart-container"><canvas id="chart-yearly"></canvas></div></div>
     `;
@@ -437,15 +440,19 @@ async function renderReports() {
 
 async function updateReports() {
     const month = $('report-month').value;
+    const monthsRange = parseInt($('report-months-range').value) || 18;
     const [monthly, dailyCat, byCat, savings, yearly] = await Promise.all([
         api('/stats/monthly'), api(`/stats/daily-by-category?month=${month}`),
         api(`/stats/by-category?month=${month}`), api('/stats/savings'), api('/stats/yearly')
     ]);
+    // Aggiorna il titolo del grafico temporale
+    const t = document.getElementById('chart-12months-title');
+    if (t) t.textContent = `Ultimi ${monthsRange} Mesi — Entrate vs Uscite`;
     drawMonthlyChart(monthly);
-    draw12MonthsChart(monthly);
+    draw12MonthsChart(monthly, monthsRange);
     drawDailyCategoryChart(dailyCat, month);
     drawCategoryChart(byCat);
-    drawSavingsChart(savings);
+    drawSavingsChart(savings, monthsRange);
     drawYearlyChart(yearly);
 }
 
@@ -464,9 +471,9 @@ function drawMonthlyChart(data) {
     });
 }
 
-function draw12MonthsChart(data) {
+function draw12MonthsChart(data, months = 18) {
     if (charts.twelvemonths) charts.twelvemonths.destroy();
-    const last12 = data.slice(0, 18).reverse();
+    const last12 = data.slice(0, months).reverse();
     const labels = last12.map(r => r.month);
     const income = last12.map(r => (r.income||0)/100);
     const expense = last12.map(r => Math.abs(r.expense||0)/100);
@@ -504,9 +511,9 @@ function drawCategoryChart(data) {
     });
 }
 
-function drawSavingsChart(data) {
+function drawSavingsChart(data, months = 18) {
     if (charts.savings) charts.savings.destroy();
-    const last12 = data.slice(-18);
+    const last12 = data.slice(-months);
     const labels = last12.map(r => r.month);
     const net = last12.map(r => ((r.income||0)+(r.expense||0))/100);
     const cumulative = last12.map(r => (r.cumulative_savings||0)/100);
