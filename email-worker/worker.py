@@ -243,21 +243,24 @@ def poll():
 
     new_count = 0
     for sender, (subject_filter, parser) in PARSERS.items():
-        # Search last 2 days instead of UNSEEN - we track processed IDs ourselves
+        # Search last 2 days. Use UID (stable) instead of sequence numbers
+        # which get recycled by IMAP and cause new emails to be skipped.
         from datetime import timedelta
         since = (datetime.now() - timedelta(days=2)).strftime('%d-%b-%Y')
         query = f'(FROM "{sender}" SINCE {since})'
-        status, messages = mail.search(None, query)
+        status, messages = mail.uid('search', None, query)
         if status != 'OK':
             continue
 
         nums = messages[0].split()
         for num in nums:
-            msg_id = num.decode()
+            msg_id = num.decode()  # This is now the UID (stable, never recycled)
             if msg_id in processed:
                 continue
 
-            status, data = mail.fetch(num, '(BODY.PEEK[])')
+            status, data = mail.uid('fetch', num, '(BODY.PEEK[])')
+            if status != 'OK' or not data or not data[0]:
+                continue
             msg = email.message_from_bytes(data[0][1])
 
             # Check subject filter
