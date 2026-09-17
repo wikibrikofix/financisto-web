@@ -428,7 +428,7 @@ async function renderReports() {
             <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Spese per Categoria</h3><div class="chart-container"><canvas id="chart-category"></canvas></div></div>
         </div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Dettaglio Giornaliero per Categoria</h3><div class="chart-container chart-large"><canvas id="chart-daily-cat"></canvas></div></div>
-        <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Ultimi 12 Mesi — Entrate vs Uscite</h3><div class="chart-container chart-large"><canvas id="chart-12months"></canvas></div></div>
+        <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Ultimi 18 Mesi — Entrate vs Uscite</h3><div class="chart-container chart-large"><canvas id="chart-12months"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Andamento Risparmi</h3><div class="chart-container chart-large"><canvas id="chart-savings"></canvas></div></div>
         <div class="card"><h3 style="margin-bottom:0.5rem;font-size:0.95rem">Riepilogo Annuale</h3><div class="chart-container"><canvas id="chart-yearly"></canvas></div></div>
     `;
@@ -466,7 +466,7 @@ function drawMonthlyChart(data) {
 
 function draw12MonthsChart(data) {
     if (charts.twelvemonths) charts.twelvemonths.destroy();
-    const last12 = data.slice(0, 12).reverse();
+    const last12 = data.slice(0, 18).reverse();
     const labels = last12.map(r => r.month);
     const income = last12.map(r => (r.income||0)/100);
     const expense = last12.map(r => Math.abs(r.expense||0)/100);
@@ -506,7 +506,7 @@ function drawCategoryChart(data) {
 
 function drawSavingsChart(data) {
     if (charts.savings) charts.savings.destroy();
-    const last12 = data.slice(-12);
+    const last12 = data.slice(-18);
     const labels = last12.map(r => r.month);
     const net = last12.map(r => ((r.income||0)+(r.expense||0))/100);
     const cumulative = last12.map(r => (r.cumulative_savings||0)/100);
